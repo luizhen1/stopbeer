@@ -194,3 +194,20 @@ footer{color:#746e68}footer>p{color:#817b75}.footer-right>div a,.footer-right>di
 .admin-product-edit-modal .add-product-form textarea{min-height:72px}
 .admin-product-edit-modal .add-product-form .primary-btn{min-height:46px;font-size:13px}
 @media(max-width:620px){.admin-product-edit-modal{padding:25px 17px 18px}.admin-product-edit-modal .product-form-head{padding-bottom:14px}.admin-product-edit-modal .add-product-form{gap:12px}.admin-product-edit-modal .add-product-form label{font-size:11px}.admin-product-edit-modal .add-product-form input,.admin-product-edit-modal .add-product-form textarea,.admin-product-edit-modal .add-product-form select{min-height:42px;font-size:12px}}
+
+@media(max-width:620px){
+  .admin-shell{display:block}
+  .admin-sidebar{inset:auto 0 0;width:100%;height:auto;min-height:calc(64px + env(safe-area-inset-bottom));flex-basis:auto;flex-direction:row;align-items:stretch;gap:0;padding:5px 6px calc(5px + env(safe-area-inset-bottom));border-right:0;border-top:1px solid #e9e5e1;background:#fff;box-shadow:0 -5px 20px #30221a12}
+  .admin-sidebar>.brand,.admin-sidebar>.admin-store,.admin-sidebar>.side-label{display:none}
+  .admin-sidebar>.side-link{position:relative;flex:1;display:flex;width:auto;height:auto;min-width:0;flex-direction:column;justify-content:center;gap:4px;margin:0;padding:5px 2px;border-radius:8px;font-size:10px;line-height:1.1;text-align:center;white-space:nowrap}
+  .admin-sidebar>.side-link>svg{width:19px;height:19px;flex:0 0 19px}
+  .admin-sidebar>.side-link b{position:absolute;top:2px;right:calc(50% - 22px);margin:0;padding:2px 5px;font-size:9px}
+  .sidebar-bottom{flex:1;min-width:0;display:flex;align-items:stretch;margin:0}
+  .admin-profile{flex:1;justify-content:center;padding:0;border:0}
+  .admin-profile>.profile-avatar,.admin-profile>span:nth-child(2){display:none}
+  .admin-profile>button{width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:5px 2px;border:0;border-radius:8px;font-size:10px;color:#6d6761}
+  .admin-profile>button svg{width:19px;height:19px}
+  .admin-profile>button::after{content:"Sair";line-height:1.1}
+  .store-link{display:none}
+  .admin-main{width:100%;max-width:none;margin:0;padding:0 14px calc(88px + env(safe-area-inset-bottom))}
+}
