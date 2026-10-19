@@ -43,6 +43,8 @@ import {
 import { brl, categories, seedProducts } from "../../src/data";
 import { auth, db, firebaseEnabled } from "../../src/firebase";
 import { handleProductImageError } from "../../src/product-image";
+import { showToast } from "../../src/alerts";
+import Swal from "sweetalert2";
 
 const storePhone = process.env.NEXT_PUBLIC_STORE_WHATSAPP || "5511999999999";
 
@@ -70,7 +72,6 @@ export default function AdminPage() {
   const [adminTab, setAdminTab] = useState("Pedidos");
   const [orderFilter, setOrderFilter] = useState("Todos");
   const [loginOpen, setLoginOpen] = useState(false);
-  const [toast, setToast] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
   const [productsLoading, setProductsLoading] = useState(firebaseEnabled);
   const [importingCatalog, setImportingCatalog] = useState(false);
@@ -131,10 +132,7 @@ export default function AdminPage() {
     );
   }, [user]);
 
-  const notify = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 2800);
-  };
+  const notify = (message) => showToast(message);
 
   const navigate = (page) => {
     router.push(page === "admin" ? "/admin" : "/");
@@ -211,9 +209,19 @@ export default function AdminPage() {
           ]);
         }
       }
-      notify(editingProduct ? "Produto atualizado" : "Produto adicionado");
+      if (editingProduct) {
+        setEditingProduct(null);
+        await Swal.fire({
+          icon: "success",
+          title: "Produto atualizado",
+          text: "As alterações foram salvas com sucesso.",
+          confirmButtonText: "Fechar",
+          confirmButtonColor: "#c92f32",
+        });
+      } else {
+        notify("Produto adicionado");
+      }
       formElement.reset();
-      setEditingProduct(null);
     } catch (error) {
       console.error("Erro ao salvar produto:", error);
       notify(
@@ -235,7 +243,9 @@ export default function AdminPage() {
       const existingIds = new Set(snapshot.docs.map((item) => item.id));
       const existingNames = new Set(
         snapshot.docs.map((item) =>
-          String(item.data().name || "").trim().toLocaleLowerCase("pt-BR"),
+          String(item.data().name || "")
+            .trim()
+            .toLocaleLowerCase("pt-BR"),
         ),
       );
       const missingProducts = seedProducts.filter(
@@ -268,7 +278,18 @@ export default function AdminPage() {
   };
 
   const removeProduct = async (product) => {
-    if (!confirm(`Remover ${product.name}?`)) return;
+    const confirmation = await Swal.fire({
+      icon: "warning",
+      title: "Remover produto?",
+      text: `Tem certeza que deseja remover ${product.name}?`,
+      showCancelButton: true,
+      confirmButtonText: "Remover",
+      cancelButtonText: "Cancelar",
+      confirmButtonColor: "#c92f32",
+      cancelButtonColor: "#77716a",
+      reverseButtons: true,
+    });
+    if (!confirmation.isConfirmed) return;
     try {
       if (firebaseEnabled) {
         await deleteDoc(doc(db, "products", product.id));
@@ -329,7 +350,9 @@ export default function AdminPage() {
       !products.some(
         (product) =>
           product.id === seed.id ||
-          String(product.name || "").trim().toLocaleLowerCase("pt-BR") ===
+          String(product.name || "")
+            .trim()
+            .toLocaleLowerCase("pt-BR") ===
             seed.name.trim().toLocaleLowerCase("pt-BR"),
       ),
   );
@@ -410,12 +433,6 @@ export default function AdminPage() {
           </button>
           <small>Acesso restrito ao proprietário</small>
         </form>
-        {toast && (
-          <div className="toast">
-            <Check size={16} />
-            {toast}
-          </div>
-        )}
       </div>
     );
   return (
@@ -787,101 +804,7 @@ export default function AdminPage() {
             </div>
             <div className="products-admin-grid">
               <section className="panel add-product-panel">
-                <div className="panel-head">
-                  <div>
-                    <h3>{editingProduct ? "Editar produto" : "Novo produto"}</h3>
-                    <p>
-                      {editingProduct
-                        ? "Atualize os dados e salve as alterações."
-                        : "Preencha as informações do item."}
-                    </p>
-                  </div>
-                  {editingProduct && (
-                    <button
-                      type="button"
-                      className="text-btn"
-                      onClick={() => setEditingProduct(null)}
-                    >
-                      <X size={16} /> Cancelar
-                    </button>
-                  )}
-                </div>
-                <form
-                  key={editingProduct?.id || "new-product"}
-                  onSubmit={saveProduct}
-                  className="add-product-form"
-                >
-                  <label>
-                    Nome do produto
-                    <input
-                      name="name"
-                      required
-                      placeholder="Ex: Heineken 350ml"
-                      defaultValue={editingProduct?.name || ""}
-                    />
-                  </label>
-                  <label>
-                    Descrição
-                    <textarea
-                      name="description"
-                      placeholder="Detalhes do produto"
-                      rows="2"
-                      defaultValue={editingProduct?.description || ""}
-                    />
-                  </label>
-                  <div className="form-row">
-                    <label className="grow">
-                      Categoria
-                      <select
-                        name="category"
-                        defaultValue={editingProduct?.category || categories[1]}
-                      >
-                        {categories.slice(1).map((c) => (
-                          <option key={c}>{c}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="grow">
-                      Preço (R$)
-                      <input
-                        required
-                        name="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0,00"
-                        defaultValue={editingProduct?.price ?? ""}
-                      />
-                    </label>
-                  </div>
-                  <div className="form-row">
-                    <label className="grow">
-                      Estoque
-                      <input
-                        required
-                        name="stock"
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="0"
-                        defaultValue={editingProduct?.stock ?? ""}
-                      />
-                    </label>
-                    <label className="grow">
-                      URL da imagem
-                      <input
-                        name="imageUrl"
-                        type="url"
-                        placeholder="https://..."
-                        defaultValue={editingProduct?.imageUrl || ""}
-                      />
-                    </label>
-                  </div>
-                  <button className="primary-btn full">
-                    {editingProduct ? "Salvar alterações" : "Adicionar produto"}
-                    {editingProduct ? <Check size={16} /> : <Plus size={16} />}
-                  </button>
-                </form>
+                <ProductForm onSubmit={saveProduct} />
               </section>
               <section className="panel inventory-panel">
                 <div className="panel-head">
@@ -964,6 +887,35 @@ export default function AdminPage() {
           </>
         )}
       </main>
+      {editingProduct && (
+        <div
+          className="modal-wrap admin-product-edit-overlay"
+          onMouseDown={(event) =>
+            event.target === event.currentTarget && setEditingProduct(null)
+          }
+        >
+          <section
+            className="modal admin-product-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-product-title"
+          >
+            <button
+              type="button"
+              className="modal-close icon-btn"
+              onClick={() => setEditingProduct(null)}
+              aria-label="Fechar edição"
+            >
+              <X />
+            </button>
+            <ProductForm
+              product={editingProduct}
+              onSubmit={saveProduct}
+              onCancel={() => setEditingProduct(null)}
+            />
+          </section>
+        </div>
+      )}
       {orderDetail && (
         <div
           className="modal-wrap"
@@ -1026,13 +978,104 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      {toast && (
-        <div className="toast">
-          <Check size={16} />
-          {toast}
-        </div>
-      )}
     </div>
+  );
+}
+
+function ProductForm({ product = null, onSubmit, onCancel }) {
+  const editing = Boolean(product);
+
+  return (
+    <>
+      <div className="panel-head product-form-head">
+        <div>
+          <h3 id={editing ? "edit-product-title" : undefined}>
+            {editing ? "Editar produto" : "Novo produto"}
+          </h3>
+          <p>
+            {editing
+              ? "Atualize os dados e salve as alterações."
+              : "Preencha as informações do item."}
+          </p>
+        </div>
+      </div>
+      <form
+        key={product?.id || "new-product"}
+        onSubmit={onSubmit}
+        className="add-product-form"
+      >
+        <label>
+          Nome do produto
+          <input
+            name="name"
+            required
+            placeholder="Ex: Heineken 350ml"
+            defaultValue={product?.name || ""}
+          />
+        </label>
+        <label>
+          Descrição
+          <textarea
+            name="description"
+            placeholder="Detalhes do produto"
+            rows="2"
+            defaultValue={product?.description || ""}
+          />
+        </label>
+        <div className="form-row">
+          <label className="grow">
+            Categoria
+            <select
+              name="category"
+              defaultValue={product?.category || categories[1]}
+            >
+              {categories.slice(1).map((category) => (
+                <option key={category}>{category}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grow">
+            Preço (R$)
+            <input
+              required
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0,00"
+              defaultValue={product?.price ?? ""}
+            />
+          </label>
+        </div>
+        <div className="form-row">
+          <label className="grow">
+            Estoque
+            <input
+              required
+              name="stock"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="0"
+              defaultValue={product?.stock ?? ""}
+            />
+          </label>
+          <label className="grow">
+            URL da imagem
+            <input
+              name="imageUrl"
+              type="url"
+              placeholder="https://..."
+              defaultValue={product?.imageUrl || ""}
+            />
+          </label>
+        </div>
+        <button className="primary-btn full">
+          {editing ? "Salvar alterações" : "Adicionar produto"}
+          {editing ? <Check size={16} /> : <Plus size={16} />}
+        </button>
+      </form>
+    </>
   );
 }
 

@@ -32,6 +32,8 @@ import {
 import { categories, brl, seedProducts } from "../src/data";
 import { db, firebaseEnabled } from "../src/firebase";
 import { handleProductImageError } from "../src/product-image";
+import { showToast } from "../src/alerts";
+import Swal from "sweetalert2";
 
 const storePhone = process.env.NEXT_PUBLIC_STORE_WHATSAPP || "5511999999999";
 
@@ -62,7 +64,6 @@ export default function HomePage() {
   const [checkout, setCheckout] = useState(false);
   const [success, setSuccess] = useState(null);
   const [detail, setDetail] = useState(null);
-  const [toast, setToast] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -100,9 +101,38 @@ export default function HomePage() {
     );
   }, []);
 
-  const notify = (message) => {
-    setToast(message);
-    setTimeout(() => setToast(""), 2800);
+  const notify = (message) => showToast(message);
+
+  const isOrderTimeOpen = () => {
+    const timeParts = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(new Date());
+    const hour = Number(timeParts.find((part) => part.type === "hour").value);
+    const minute = Number(
+      timeParts.find((part) => part.type === "minute").value,
+    );
+    const minutes = hour * 60 + minute;
+    return minutes >= 8 * 60 && minutes <= 19 * 60 + 30;
+  };
+
+  const showStoreClosedAlert = () =>
+    Swal.fire({
+      icon: "info",
+      title: "Estamos fora do horário de pedidos",
+      text: "Estamos aceitando pedidos das 08:00 às 19:30. Tente novamente dentro desse horário.",
+      confirmButtonText: "Entendi",
+      confirmButtonColor: "#c92f32",
+    });
+
+  const openCheckout = () => {
+    if (!isOrderTimeOpen()) {
+      showStoreClosedAlert();
+      return;
+    }
+    setCheckout(true);
   };
 
   const visible = useMemo(
@@ -136,6 +166,10 @@ export default function HomePage() {
   };
 
   const buyNow = (product) => {
+    if (!isOrderTimeOpen()) {
+      showStoreClosedAlert();
+      return;
+    }
     setCart((items) => {
       const found = items.find((item) => item.id === product.id);
       if (!found) return [...items, { ...product, quantity: 1 }];
@@ -171,6 +205,11 @@ export default function HomePage() {
 
   const submitOrder = async (event) => {
     event.preventDefault();
+    if (!isOrderTimeOpen()) {
+      showStoreClosedAlert();
+      setCheckout(false);
+      return;
+    }
     const form = new FormData(event.currentTarget);
     const customer = {
       name: form.get("name"),
@@ -225,7 +264,7 @@ export default function HomePage() {
         <span>
           <Truck size={13} /> Entrega grátis acima de R$ 150
         </span>
-        <span>Peça até 22h · Entregamos geladinho</span>
+        <span>Pedidos até 19h30 · Entregamos geladinho</span>
         <a
           href={wa(storePhone, "Oi! Vim pelo site da StopBeer.")}
           target="_blank"
@@ -588,10 +627,7 @@ export default function HomePage() {
                   <small className="delivery-note">
                     Taxa de entrega calculada na confirmação
                   </small>
-                  <button
-                    className="primary-btn full"
-                    onClick={() => setCheckout(true)}
-                  >
+                  <button className="primary-btn full" onClick={openCheckout}>
                     Continuar pedido <ArrowRight size={17} />
                   </button>
                   <button
@@ -848,12 +884,6 @@ export default function HomePage() {
             </div>
           </div>
         </Modal>
-      )}
-      {toast && (
-        <div className="toast">
-          <Check size={16} />
-          {toast}
-        </div>
       )}
     </>
   );

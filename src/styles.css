@@ -184,3 +184,13 @@ footer{color:#746e68}footer>p{color:#817b75}.footer-right>div a,.footer-right>di
   .inventory-list>.admin-empty{padding:18px;min-height:180px}
   .inventory-list>.admin-empty .primary-btn{font-size:10px;min-height:38px;padding:0 11px}
 }
+
+.admin-product-edit-overlay{z-index:40}
+.admin-product-edit-modal{width:min(680px,100%);padding:30px}
+.admin-product-edit-modal .product-form-head{padding:0 0 18px}
+.admin-product-edit-modal .add-product-form{padding:0;gap:15px}
+.admin-product-edit-modal .add-product-form label{font-size:12px;gap:7px}
+.admin-product-edit-modal .add-product-form input,.admin-product-edit-modal .add-product-form textarea,.admin-product-edit-modal .add-product-form select{min-height:44px;padding:11px 12px;font-size:13px}
+.admin-product-edit-modal .add-product-form textarea{min-height:72px}
+.admin-product-edit-modal .add-product-form .primary-btn{min-height:46px;font-size:13px}
+@media(max-width:620px){.admin-product-edit-modal{padding:25px 17px 18px}.admin-product-edit-modal .product-form-head{padding-bottom:14px}.admin-product-edit-modal .add-product-form{gap:12px}.admin-product-edit-modal .add-product-form label{font-size:11px}.admin-product-edit-modal .add-product-form input,.admin-product-edit-modal .add-product-form textarea,.admin-product-edit-modal .add-product-form select{min-height:42px;font-size:12px}}
