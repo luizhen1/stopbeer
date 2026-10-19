@@ -51,7 +51,7 @@ function wa(phone, message) {
 export default function HomePage() {
   const router = useRouter();
   const [products, setProducts] = useState(() =>
-    localRead("sb-products", seedProducts),
+    firebaseEnabled ? [] : localRead("sb-products", seedProducts),
   );
   const [orders, setOrders] = useState(() => localRead("sb-orders", []));
   const [cart, setCart] = useState(() => localRead("sb-cart", []));
@@ -71,10 +71,12 @@ export default function HomePage() {
   }, [search]);
 
   useEffect(() => {
+    if (firebaseEnabled) return;
     localStorage.setItem("sb-products", JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
+    if (firebaseEnabled) return;
     localStorage.setItem("sb-orders", JSON.stringify(orders));
   }, [orders]);
 
@@ -88,13 +90,13 @@ export default function HomePage() {
     return onSnapshot(
       collection(db, "products"),
       (snapshot) => {
-        if (!snapshot.empty) {
-          setProducts(
-            snapshot.docs.map((item) => ({ id: item.id, ...item.data() })),
-          );
-        }
+        setProducts(
+          snapshot.docs.map((item) => ({ id: item.id, ...item.data() })),
+        );
       },
-      () => {},
+      (error) => {
+        console.error("Não foi possível carregar os produtos:", error);
+      },
     );
   }, []);
 

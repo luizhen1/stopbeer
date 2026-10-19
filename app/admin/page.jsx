@@ -15,6 +15,7 @@ import {
   Mail,
   MessageCircle,
   Package,
+  Pencil,
   Plus,
   ShoppingBag,
   Trash2,
@@ -26,11 +27,13 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   serverTimestamp,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import {
   onAuthStateChanged,
@@ -60,7 +63,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState(() =>
-    localRead("sb-products", seedProducts),
+    firebaseEnabled ? [] : localRead("sb-products", seedProducts),
   );
   const [orders, setOrders] = useState(() => localRead("sb-orders", []));
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -68,12 +71,17 @@ export default function AdminPage() {
   const [orderFilter, setOrderFilter] = useState("Todos");
   const [loginOpen, setLoginOpen] = useState(false);
   const [toast, setToast] = useState("");
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productsLoading, setProductsLoading] = useState(firebaseEnabled);
+  const [importingCatalog, setImportingCatalog] = useState(false);
 
   useEffect(() => {
+    if (firebaseEnabled) return;
     localStorage.setItem("sb-products", JSON.stringify(products));
   }, [products]);
 
   useEffect(() => {
+    if (firebaseEnabled) return;
     localStorage.setItem("sb-orders", JSON.stringify(orders));
   }, [orders]);
 
@@ -87,13 +95,19 @@ export default function AdminPage() {
     return onSnapshot(
       collection(db, "products"),
       (snapshot) => {
-        if (!snapshot.empty) {
-          setProducts(
-            snapshot.docs.map((item) => ({ id: item.id, ...item.data() })),
-          );
-        }
+        setProducts(
+          snapshot.docs.map((item) => ({ id: item.id, ...item.data() })),
+        );
+        setProductsLoading(false);
       },
-      () => {},
+      (error) => {
+        setProductsLoading(false);
+        notify(
+          error.code === "permission-denied"
+            ? "O Firebase bloqueou o acesso aos produtos. Confira as regras do Firestore."
+            : "Não foi possível carregar os produtos do Firebase.",
+        );
+      },
     );
   }, []);
 
@@ -162,29 +176,94 @@ export default function AdminPage() {
 
   const saveProduct = async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const product = {
-      name: form.get("name"),
-      description: form.get("description"),
-      category: form.get("category"),
+      name: String(form.get("name") || "").trim(),
+      description: String(form.get("description") || "").trim(),
+      category: String(form.get("category") || categories[1]),
       price: Number(form.get("price")),
       stock: Number(form.get("stock")),
-      imageUrl: form.get("imageUrl") || seedProducts[0].imageUrl,
-      available: true,
+      imageUrl:
+        String(form.get("imageUrl") || "").trim() ||
+        editingProduct?.imageUrl ||
+        "",
+      available: editingProduct?.available ?? true,
     };
     try {
       if (firebaseEnabled) {
-        await addDoc(collection(db, "products"), product);
+        if (editingProduct) {
+          await updateDoc(doc(db, "products", editingProduct.id), product);
+        } else {
+          await addDoc(collection(db, "products"), product);
+        }
       } else {
-        setProducts((items) => [
-          { ...product, id: `p${Date.now()}` },
-          ...items,
-        ]);
+        if (editingProduct) {
+          setProducts((items) =>
+            items.map((item) =>
+              item.id === editingProduct.id ? { ...item, ...product } : item,
+            ),
+          );
+        } else {
+          setProducts((items) => [
+            { ...product, id: `p${Date.now()}` },
+            ...items,
+          ]);
+        }
       }
-      notify("Produto adicionado");
-      event.currentTarget.reset();
-    } catch {
-      notify("Falha ao salvar produto");
+      notify(editingProduct ? "Produto atualizado" : "Produto adicionado");
+      formElement.reset();
+      setEditingProduct(null);
+    } catch (error) {
+      console.error("Erro ao salvar produto:", error);
+      notify(
+        error.code === "permission-denied"
+          ? "Sem permissão para salvar. Confira se o UID das regras é o do usuário conectado."
+          : "Falha ao salvar produto. Confira os dados e tente novamente.",
+      );
+    }
+  };
+
+  const importInitialCatalog = async () => {
+    if (!firebaseEnabled || !user || importingCatalog) {
+      return;
+    }
+
+    setImportingCatalog(true);
+    try {
+      const snapshot = await getDocs(collection(db, "products"));
+      const existingIds = new Set(snapshot.docs.map((item) => item.id));
+      const existingNames = new Set(
+        snapshot.docs.map((item) =>
+          String(item.data().name || "").trim().toLocaleLowerCase("pt-BR"),
+        ),
+      );
+      const missingProducts = seedProducts.filter(
+        (product) =>
+          !existingIds.has(product.id) &&
+          !existingNames.has(product.name.trim().toLocaleLowerCase("pt-BR")),
+      );
+
+      if (!missingProducts.length) {
+        notify("O catálogo inicial já está cadastrado");
+        return;
+      }
+
+      const batch = writeBatch(db);
+      missingProducts.forEach(({ id, ...product }) => {
+        batch.set(doc(db, "products", id), product);
+      });
+      await batch.commit();
+      notify(`${missingProducts.length} produtos importados para o Firestore`);
+    } catch (error) {
+      console.error("Erro ao importar catálogo inicial:", error);
+      notify(
+        error.code === "permission-denied"
+          ? "Sem permissão para cadastrar. Confira as regras do Firestore."
+          : "Falha ao importar o catálogo inicial.",
+      );
+    } finally {
+      setImportingCatalog(false);
     }
   };
 
@@ -196,6 +275,7 @@ export default function AdminPage() {
       } else {
         setProducts((items) => items.filter((item) => item.id !== product.id));
       }
+      if (editingProduct?.id === product.id) setEditingProduct(null);
       notify("Produto removido");
     } catch {
       notify("Falha ao remover produto");
@@ -244,6 +324,15 @@ export default function AdminPage() {
     .reduce((s, o) => s + Number(o.totalAmount || 0), 0);
   const average = monthOrders.length ? revenue / monthOrders.length : 0;
   const pending = orders.filter((o) => o.status === "pendente").length;
+  const initialCatalogMissing = seedProducts.filter(
+    (seed) =>
+      !products.some(
+        (product) =>
+          product.id === seed.id ||
+          String(product.name || "").trim().toLocaleLowerCase("pt-BR") ===
+            seed.name.trim().toLocaleLowerCase("pt-BR"),
+      ),
+  );
   const statuses = [
     "pendente",
     "confirmado",
@@ -700,17 +789,35 @@ export default function AdminPage() {
               <section className="panel add-product-panel">
                 <div className="panel-head">
                   <div>
-                    <h3>Novo produto</h3>
-                    <p>Preencha as informações do item.</p>
+                    <h3>{editingProduct ? "Editar produto" : "Novo produto"}</h3>
+                    <p>
+                      {editingProduct
+                        ? "Atualize os dados e salve as alterações."
+                        : "Preencha as informações do item."}
+                    </p>
                   </div>
+                  {editingProduct && (
+                    <button
+                      type="button"
+                      className="text-btn"
+                      onClick={() => setEditingProduct(null)}
+                    >
+                      <X size={16} /> Cancelar
+                    </button>
+                  )}
                 </div>
-                <form onSubmit={saveProduct} className="add-product-form">
+                <form
+                  key={editingProduct?.id || "new-product"}
+                  onSubmit={saveProduct}
+                  className="add-product-form"
+                >
                   <label>
                     Nome do produto
                     <input
                       name="name"
                       required
                       placeholder="Ex: Heineken 350ml"
+                      defaultValue={editingProduct?.name || ""}
                     />
                   </label>
                   <label>
@@ -719,12 +826,16 @@ export default function AdminPage() {
                       name="description"
                       placeholder="Detalhes do produto"
                       rows="2"
+                      defaultValue={editingProduct?.description || ""}
                     />
                   </label>
                   <div className="form-row">
                     <label className="grow">
                       Categoria
-                      <select name="category">
+                      <select
+                        name="category"
+                        defaultValue={editingProduct?.category || categories[1]}
+                      >
                         {categories.slice(1).map((c) => (
                           <option key={c}>{c}</option>
                         ))}
@@ -739,6 +850,7 @@ export default function AdminPage() {
                         min="0"
                         step="0.01"
                         placeholder="0,00"
+                        defaultValue={editingProduct?.price ?? ""}
                       />
                     </label>
                   </div>
@@ -750,7 +862,9 @@ export default function AdminPage() {
                         name="stock"
                         type="number"
                         min="0"
+                        step="1"
                         placeholder="0"
+                        defaultValue={editingProduct?.stock ?? ""}
                       />
                     </label>
                     <label className="grow">
@@ -759,11 +873,13 @@ export default function AdminPage() {
                         name="imageUrl"
                         type="url"
                         placeholder="https://..."
+                        defaultValue={editingProduct?.imageUrl || ""}
                       />
                     </label>
                   </div>
                   <button className="primary-btn full">
-                    Adicionar produto <Plus size={16} />
+                    {editingProduct ? "Salvar alterações" : "Adicionar produto"}
+                    {editingProduct ? <Check size={16} /> : <Plus size={16} />}
                   </button>
                 </form>
               </section>
@@ -773,8 +889,38 @@ export default function AdminPage() {
                     <h3>Produtos</h3>
                     <p>Gerencie preços e disponibilidade.</p>
                   </div>
+                  {firebaseEnabled &&
+                    !productsLoading &&
+                    initialCatalogMissing.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-btn import-catalog-button"
+                        onClick={importInitialCatalog}
+                        disabled={importingCatalog || !user}
+                      >
+                        {importingCatalog
+                          ? "Importando..."
+                          : `Importar ${initialCatalogMissing.length} do catálogo`}
+                        <Plus size={16} />
+                      </button>
+                    )}
                 </div>
                 <div className="inventory-list">
+                  {productsLoading && (
+                    <div className="admin-empty">
+                      <p>Carregando produtos...</p>
+                    </div>
+                  )}
+                  {!productsLoading && products.length === 0 && (
+                    <div className="admin-empty">
+                      <Package />
+                      <p>
+                        {firebaseEnabled
+                          ? "Ainda não há produtos no Firestore. Cadastre um produto ou importe o catálogo inicial."
+                          : "Nenhum produto cadastrado."}
+                      </p>
+                    </div>
+                  )}
                   {products.map((p) => (
                     <div className="inventory-row" key={p.id}>
                       <img
@@ -788,9 +934,18 @@ export default function AdminPage() {
                         </small>
                       </span>
                       <button
+                        className="edit-product"
+                        onClick={() => setEditingProduct(p)}
+                        title={`Editar ${p.name}`}
+                        aria-label={`Editar ${p.name}`}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
                         className={`availability ${p.available ? "on" : ""}`}
                         onClick={() => toggleProduct(p)}
                         title="Alternar disponibilidade"
+                        aria-label={`${p.available ? "Pausar" : "Ativar"} ${p.name}`}
                       >
                         <i />
                       </button>

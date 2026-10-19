@@ -172,3 +172,15 @@ footer{color:#746e68}footer>p{color:#817b75}.footer-right>div a,.footer-right>di
   .inventory-name b{font-size:10px}
   .inventory-name small{font-size:8px}
 }
+
+.edit-product{width:34px;height:34px;display:grid;place-items:center;border:1px solid #e4ded8;border-radius:7px;background:#fff;color:#716a64;flex:0 0 auto}
+.edit-product:hover{border-color:#d7a19e;color:var(--red);background:#fff8f6}
+.inventory-row .remove-product{width:34px;height:34px;display:grid;place-items:center;flex:0 0 auto}
+.inventory-list>.admin-empty{padding:24px;min-height:230px;text-align:center;line-height:1.6}
+.inventory-list>.admin-empty p{max-width:420px;margin:0}
+.inventory-list>.admin-empty .primary-btn{font-size:12px;min-height:42px;padding:0 16px;gap:8px}
+@media(max-width:620px){
+  .edit-product,.inventory-row .remove-product{width:30px;height:30px}
+  .inventory-list>.admin-empty{padding:18px;min-height:180px}
+  .inventory-list>.admin-empty .primary-btn{font-size:10px;min-height:38px;padding:0 11px}
+}
