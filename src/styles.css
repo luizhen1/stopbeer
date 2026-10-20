@@ -291,7 +291,7 @@ footer{color:#746e68}footer>p{color:#817b75}.footer-right>div a,.footer-right>di
 .hero-title-accent{color:var(--red)}
 .hero-carousel h1,.hero-carousel .hero-copy>p,.hero-carousel .hero-art>img{animation:hero-slide-in .38s ease both}
 .hero-carousel .hero-art>img{animation-delay:.04s}
-.hero-carousel-controls{z-index:6;gap:5px;padding:4px 6px;border:1px solid #eee5de;border-radius:20px;background:#ffffffed;box-shadow:0 3px 12px #301b140d}
+.hero-carousel-controls{bottom:10px;right:12px;z-index:6;gap:5px;padding:4px 6px;border:1px solid #eee5de;border-radius:20px;background:#ffffffed;box-shadow:0 3px 12px #301b140d}
 .hero-carousel-controls button{width:25px;height:25px;display:grid;place-items:center;padding:0;border:0;border-radius:50%;background:transparent;color:#625b55;transition:background .18s,color .18s}
 .hero-carousel-controls button:hover,.hero-carousel-controls button:focus-visible{background:#fff0ed;color:var(--red);outline:none}
 .hero-carousel-controls .hero-carousel-dot{width:8px;height:8px;background:#d9d0c8}
