@@ -91,7 +91,7 @@ export default function AdminPage() {
   );
   const [orders, setOrders] = useState(() => localRead("sb-orders", []));
   const [month, setMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [adminTab, setAdminTab] = useState("Pedidos");
+  const [adminTab, setAdminTab] = useState("Visão geral");
   const [orderFilter, setOrderFilter] = useState("Todos");
   const [loginOpen, setLoginOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -673,7 +673,7 @@ export default function AdminPage() {
         </header>
         {adminTab === "Visão geral" ? (
           <>
-            <div className="overview-head">
+            <div className="overview-head dashboard-overview-head">
               <div>
                 <h2>Resumo da operação</h2>
                 <p>Acompanhe como estão as vendas da sua loja.</p>

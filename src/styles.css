@@ -297,5 +297,36 @@ footer{color:#746e68}footer>p{color:#817b75}.footer-right>div a,.footer-right>di
 .hero-carousel-controls .hero-carousel-dot{width:8px;height:8px;background:#d9d0c8}
 .hero-carousel-controls .hero-carousel-dot.active{width:18px;border-radius:8px;background:var(--red)}
 @keyframes hero-slide-in{from{opacity:.55;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:620px){.hero-carousel-controls{bottom:6px;right:0;gap:2px;padding:3px 4px}.hero-carousel-controls button{width:23px;height:23px}.hero-carousel-controls .hero-carousel-dot{width:7px;height:7px}.hero-carousel-controls .hero-carousel-dot.active{width:15px}}
+@media(max-width:620px){.hero-carousel-controls{bottom:6px;left:50%;right:auto;transform:translateX(-50%);gap:2px;padding:3px 4px}.hero-carousel-controls button{width:23px;height:23px}.hero-carousel-controls .hero-carousel-dot{width:7px;height:7px}.hero-carousel-controls .hero-carousel-dot.active{width:15px}}
 @media(prefers-reduced-motion:reduce){.hero-carousel h1,.hero-carousel .hero-copy>p,.hero-carousel .hero-art>img{animation:none}}
+
+@media(max-width:620px){
+  .storefront-shell>.header{padding-right:56px}
+  .hero{padding-top:38px;padding-bottom:44px}
+  .catalog{padding-left:14px;padding-right:14px}
+  .banner{margin-left:14px;margin-right:14px}
+  .drawer{top:0;right:0;bottom:0;height:auto;min-height:100vh;min-height:100dvh;padding-bottom:env(safe-area-inset-bottom)}
+  .closing .primary-btn{top:106px}
+  footer{grid-template-columns:max-content minmax(0,1fr)}
+  footer>p{min-width:0;max-width:240px;text-wrap:pretty}
+  .footer-copy-break{display:none}
+  .orders-table-wrap{margin:0}
+  .orders-table-wrap th:first-child,.orders-table-wrap td:first-child{min-width:90px;padding-left:12px;padding-right:12px;white-space:nowrap}
+}
+
+@media(max-width:620px){
+  .dashboard-overview-head{gap:8px;align-items:center}
+  .dashboard-overview-head>div:first-child{min-width:0}
+  .dashboard-overview-head h2{font-size:14px;white-space:nowrap}
+  .dashboard-overview-head .month-selector{width:188px;min-width:0;flex:0 0 188px;gap:0;padding:0 3px}
+  .dashboard-overview-head .month-selector .month-nav,.dashboard-overview-head .month-selector .month-calendar{width:24px;height:28px;flex-basis:24px}
+  .dashboard-overview-head .month-selector .month-label{font-size:10px}
+}
+
+@media(max-width:620px){
+  .admin-sidebar>.side-link{height:100%;min-height:54px;align-self:stretch}
+  .admin-sidebar>.sidebar-bottom,.admin-sidebar .admin-profile{height:100%;align-self:stretch}
+  .admin-sidebar .admin-profile>button{height:100%;min-height:54px;line-height:1.1}
+  .admin-sidebar>.side-link:nth-of-type(2),.admin-sidebar>.side-link:nth-of-type(3){transform:translateY(-3px)}
+  .admin-sidebar>.side-link:nth-of-type(1),.admin-sidebar .sidebar-bottom .admin-profile>button:not(.profile-avatar):not(.profile-details){transform:translateY(3px)}
+}

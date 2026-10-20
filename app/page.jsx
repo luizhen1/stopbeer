@@ -393,12 +393,6 @@ export default function HomePage() {
             <span>Meu carrinho</span>
             <b>{count}</b>
           </button>
-          <button
-            className="mobile-search"
-            onClick={() => document.querySelector(".searchbox input")?.focus()}
-          >
-            <Search />
-          </button>
         </div>
       </header>
       <main className={search.trim() ? "search-mode" : undefined}>
@@ -674,7 +668,7 @@ export default function HomePage() {
         </a>
         <p>
           Boas resenhas começam com a gente.
-          <br />
+          <br className="footer-copy-break" />
           Feito com responsabilidade. Beba com moderação.
         </p>
         <div className="footer-right">
