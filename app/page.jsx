@@ -8,6 +8,8 @@ import {
   Beer,
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Flame,
   LoaderCircle,
   MapPin,
@@ -37,6 +39,53 @@ import Swal from "sweetalert2";
 
 const storePhone = process.env.NEXT_PUBLIC_STORE_WHATSAPP || "5511999999999";
 
+const heroSlides = [
+  {
+    eyebrow: "A gelada chega antes da vontade passar",
+    title: ["Seu rolê.", "Sua gelada.", "Nosso corre."],
+    description:
+      "As bebidas mais geladas da cidade, entregues rapidinho aí na sua porta.",
+    label: "DESDE 2018",
+    labelTitle: ["Resenha boa", "começa gelada."],
+    labelDescription: "Não deixa pra depois.",
+    badge: "MAIS PEDIDO",
+    badgeDescription: "da semana",
+    sticker: "-18°",
+    stickerDescription: "NO PONTO",
+    image:
+      "https://s2-oglobo.glbimg.com/EQOIatMEIZ57V18RuY_GoNQXphs=/1200x/smart/filters:cover():strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2026/S/h/bkLJ9sTcAuUXZbOHfBFw/115741784-el-exclusivo-rio-de-janeiro-rj-23-07-2026-degustacao-de-cervejas-sem-gluten-encontro-no.jpg",
+    imageAlt: "Seleção de cervejas para compartilhar",
+  },
+  {
+    eyebrow: "Um brinde deixa tudo mais especial",
+    title: ["Celebre.", "Brinde do", "seu jeito."],
+    description:
+      "Vinhos e espumantes para acompanhar bons encontros e momentos especiais.",
+    label: "UM BOM BRINDE",
+    labelTitle: ["A ocasião pede", "uma taça."],
+    labelDescription: "Encontre seu favorito.",
+    badge: "PRA BRINDAR",
+    badgeDescription: "em boa companhia",
+    image:
+      "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=1200&q=85",
+    imageAlt: "Taças de vinho em um brinde",
+  },
+  {
+    eyebrow: "A resenha fica melhor com tudo por perto",
+    title: ["Sua noite.", "Seu combo.", "Nosso corre."],
+    description:
+      "Escolha bebidas, gelo e acompanhamentos. A gente entrega tudo geladinho.",
+    label: "RESENHA COMPLETA",
+    labelTitle: ["Tudo pra sua", "noite."],
+    labelDescription: "Só escolher e aproveitar.",
+    badge: "COMBOS",
+    badgeDescription: "pra compartilhar",
+    image:
+      "https://images.unsplash.com/photo-1514933651103-005eec06c04b?auto=format&fit=crop&w=1200&q=85",
+    imageAlt: "Ambiente aconchegante para uma noite entre amigos",
+  },
+];
+
 function localRead(key, fallback) {
   try {
     return JSON.parse(localStorage.getItem(key)) ?? fallback;
@@ -65,6 +114,20 @@ export default function HomePage() {
   const [success, setSuccess] = useState(null);
   const [detail, setDetail] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [activeHero, setActiveHero] = useState(0);
+
+  useEffect(() => {
+    if (search.trim()) return;
+    const interval = setInterval(() => {
+      setActiveHero((current) => (current + 1) % heroSlides.length);
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [activeHero, search]);
+
+  const changeHero = (index) => {
+    setActiveHero((index + heroSlides.length) % heroSlides.length);
+  };
+  const activeSlide = heroSlides[activeHero];
 
   useEffect(() => {
     const timeout = setTimeout(() => setQueryText(search), 250);
@@ -259,7 +322,7 @@ export default function HomePage() {
     }
   };
   return (
-    <>
+    <div className="storefront-shell">
       <div className="topline">
         <span>
           <Truck size={13} /> Entrega grátis acima de R$ 150
@@ -299,15 +362,32 @@ export default function HomePage() {
           <kbd>⌘ K</kbd>
         </div>
         <div className="header-actions">
-          <a className="delivery" href="#entrega">
-            <MapPin size={17} />
-            <span>
-              <small>ENTREGAMOS EM</small>
-              <b>
-                Sua região <ChevronDown size={13} />
-              </b>
-            </span>
-          </a>
+          <details className="delivery-region">
+            <summary className="delivery">
+              <MapPin size={17} />
+              <span>
+                <small>ENTREGAMOS EM</small>
+                <b>
+                  Sertaneja - PR <ChevronDown size={13} />
+                </b>
+              </span>
+            </summary>
+            <div className="delivery-region-menu">
+              <span>Área de entrega</span>
+              <button
+                type="button"
+                onClick={(event) =>
+                  event.currentTarget
+                    .closest("details")
+                    ?.removeAttribute("open")
+                }
+              >
+                <MapPin size={15} />
+                Sertaneja - PR
+                <Check size={15} />
+              </button>
+            </div>
+          </details>
           <button className="cart-button" onClick={() => setDrawer(true)}>
             <ShoppingBag size={18} />
             <span>Meu carrinho</span>
@@ -321,23 +401,28 @@ export default function HomePage() {
           </button>
         </div>
       </header>
-      <main>
-        <section className="hero">
+      <main className={search.trim() ? "search-mode" : undefined}>
+        <section
+          className="hero hero-carousel"
+          aria-roledescription="carrossel"
+        >
           <div className="hero-copy">
             <div className="eyebrow">
-              <span className="pulse-dot" /> A gelada chega antes da vontade
-              passar
+              <span className="pulse-dot" /> {activeSlide.eyebrow}
             </div>
-            <h1>
-              Seu rolê.
-              <br />
-              <em>Sua gelada.</em>
-              <br />
-              Nosso corre.
+            <h1 key={`hero-title-${activeHero}`}>
+              {activeSlide.title.map((line, index) => (
+                <span
+                  className={index === 1 ? "hero-title-accent" : undefined}
+                  key={line}
+                >
+                  {line}
+                  {index < activeSlide.title.length - 1 && <br />}
+                </span>
+              ))}
             </h1>
-            <p>
-              As bebidas mais geladas da cidade, entregues rapidinho aí na sua
-              porta.
+            <p key={`hero-description-${activeHero}`}>
+              {activeSlide.description}
             </p>
             <a href="#catalogo" className="primary-btn">
               Escolher minhas bebidas <ArrowRight size={17} />
@@ -356,25 +441,58 @@ export default function HomePage() {
           </div>
           <div className="hero-art">
             <div className="hero-label">
-              <span>DESDE 2018</span>
+              <span>{activeSlide.label}</span>
               <b>
-                Resenha boa
+                {activeSlide.labelTitle[0]}
                 <br />
-                começa gelada.
+                {activeSlide.labelTitle[1]}
               </b>
-              <small>Não deixa pra depois.</small>
+              <small>{activeSlide.labelDescription}</small>
             </div>
-            <img src="https://s2-oglobo.glbimg.com/EQOIatMEIZ57V18RuY_GoNQXphs=/1200x/smart/filters:cover():strip_icc()/i.s3.glbimg.com/v1/AUTH_da025474c0c44edd99332dddb09cabe8/internal_photos/bs/2026/S/h/bkLJ9sTcAuUXZbOHfBFw/115741784-el-exclusivo-rio-de-janeiro-rj-23-07-2026-degustacao-de-cervejas-sem-gluten-encontro-no.jpg" />
+            <img
+              key={`hero-image-${activeHero}`}
+              src={activeSlide.image}
+              alt={activeSlide.imageAlt}
+            />
             <div className="hero-tag">
-              <Flame size={14} fill="currentColor" /> MAIS PEDIDO{" "}
-              <b>da semana</b>
+              <Flame size={14} fill="currentColor" /> {activeSlide.badge}{" "}
+              <b>{activeSlide.badgeDescription}</b>
             </div>
-            <div className="hero-sticker">
-              -18°<small>NO PONTO</small>
-            </div>
+            {activeHero === 0 && (
+              <div className="hero-sticker">
+                {activeSlide.sticker}
+                <small>{activeSlide.stickerDescription}</small>
+              </div>
+            )}
           </div>
-          <div className="hero-index">
-            01 <span /> 04
+          <div
+            className="hero-index hero-carousel-controls"
+            aria-label="Navegação dos banners"
+          >
+            <button
+              type="button"
+              aria-label="Banner anterior"
+              onClick={() => changeHero(activeHero - 1)}
+            >
+              <ChevronLeft size={15} />
+            </button>
+            {heroSlides.map((slide, index) => (
+              <button
+                type="button"
+                className={`hero-carousel-dot${index === activeHero ? " active" : ""}`}
+                aria-label={`Ir para o banner ${index + 1}`}
+                aria-current={index === activeHero ? "true" : undefined}
+                key={slide.eyebrow}
+                onClick={() => changeHero(index)}
+              />
+            ))}
+            <button
+              type="button"
+              aria-label="Próximo banner"
+              onClick={() => changeHero(activeHero + 1)}
+            >
+              <ChevronRight size={15} />
+            </button>
           </div>
         </section>
         <section className="benefits">
@@ -885,7 +1003,7 @@ export default function HomePage() {
           </div>
         </Modal>
       )}
-    </>
+    </div>
   );
 }
 

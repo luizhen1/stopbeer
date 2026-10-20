@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   ArrowUpRight,
   Beer,
+  CalendarDays,
   Check,
+  ChevronLeft,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -39,6 +41,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
 } from "firebase/auth";
 import { brl, categories, seedProducts } from "../../src/data";
 import { auth, db, firebaseEnabled } from "../../src/firebase";
@@ -61,9 +64,28 @@ function wa(phone, message) {
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
 
+function formatMonthLabel(value) {
+  const [year, month] = value.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, 1)));
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [profileName, setProfileName] = useState(() =>
+    localRead("sb-owner-name", ""),
+  );
+  const [profilePhoto, setProfilePhoto] = useState(() =>
+    localRead("sb-owner-photo", ""),
+  );
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [storeMenuOpen, setStoreMenuOpen] = useState(false);
+  const storeSelectorRef = useRef(null);
   const [products, setProducts] = useState(() =>
     firebaseEnabled ? [] : localRead("sb-products", seedProducts),
   );
@@ -88,8 +110,33 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!firebaseEnabled) return;
-    return onAuthStateChanged(auth, setUser);
+    return onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      if (!nextUser) return;
+      setProfileName(nextUser.displayName || "");
+      setProfilePhoto(nextUser.photoURL || "");
+    });
   }, []);
+
+  useEffect(() => {
+    if (!storeMenuOpen) return;
+
+    const closeOnOutsideClick = (event) => {
+      if (!storeSelectorRef.current?.contains(event.target)) {
+        setStoreMenuOpen(false);
+      }
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setStoreMenuOpen(false);
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [storeMenuOpen]);
 
   useEffect(() => {
     if (!firebaseEnabled) return;
@@ -133,6 +180,46 @@ export default function AdminPage() {
   }, [user]);
 
   const notify = (message) => showToast(message);
+
+  const saveProfile = async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const name = String(form.get("displayName") || "").trim();
+    const photoURL = String(form.get("photoURL") || "").trim();
+
+    setProfileSaving(true);
+    try {
+      if (firebaseEnabled && auth.currentUser) {
+        await updateProfile(auth.currentUser, {
+          displayName: name || null,
+          photoURL: photoURL || null,
+        });
+        setUser(auth.currentUser);
+      }
+      localStorage.setItem("sb-owner-name", JSON.stringify(name));
+      localStorage.setItem("sb-owner-photo", JSON.stringify(photoURL));
+      setProfileName(name);
+      setProfilePhoto(photoURL);
+      setProfileOpen(false);
+      await Swal.fire({
+        icon: "success",
+        title: "Perfil atualizado",
+        text: "Seu nome e sua imagem foram salvos.",
+        confirmButtonText: "Fechar",
+        confirmButtonColor: "#c92f32",
+      });
+    } catch (error) {
+      console.error("Não foi possível atualizar o perfil:", error);
+      notify(
+        "Não foi possível atualizar o perfil. Confira a URL da imagem e tente novamente.",
+      );
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const ownerDisplayName = profileName || user?.displayName || "Proprietário";
+  const ownerInitial = ownerDisplayName.charAt(0).toUpperCase() || "S";
 
   const navigate = (page) => {
     router.push(page === "admin" ? "/admin" : "/");
@@ -334,12 +421,19 @@ export default function AdminPage() {
     if (form.get("email") && form.get("password")) setLoginOpen(true);
   };
 
-  const [localMonth, setLocalMonth] = useState(month);
   const [orderDetail, setOrderDetail] = useState(null);
   const isAuthenticated = isAuth;
   const monthOrders = orders.filter(
     (o) => String(o.createdAt || "").slice(0, 7) === month,
   );
+  const changeMonth = (offset) => {
+    const [year, monthNumber] = month.split("-").map(Number);
+    const date = new Date(year, monthNumber - 1 + offset, 1);
+    const nextMonth = `${date.getFullYear()}-${String(
+      date.getMonth() + 1,
+    ).padStart(2, "0")}`;
+    setMonth(nextMonth);
+  };
   const revenue = monthOrders
     .filter((o) => o.status !== "cancelado")
     .reduce((s, o) => s + Number(o.totalAmount || 0), 0);
@@ -454,13 +548,43 @@ export default function AdminPage() {
             <small>GESTÃO</small>
           </span>
         </a>
-        <div className="admin-store">
-          <span className="store-avatar">SB</span>
-          <span>
-            <b>StopBeer</b>
-            <small>Distribuidora</small>
-          </span>
-          <ChevronDown size={14} />
+        <div className="admin-store-wrap" ref={storeSelectorRef}>
+          <button
+            type="button"
+            className="admin-store"
+            aria-haspopup="listbox"
+            aria-expanded={storeMenuOpen}
+            onClick={() => setStoreMenuOpen((open) => !open)}
+          >
+            <span className="store-avatar">SB</span>
+            <span>
+              <b>StopBeer</b>
+              <small>Distribuidora</small>
+            </span>
+            <ChevronDown size={14} />
+          </button>
+          {storeMenuOpen && (
+            <div
+              className="admin-store-menu"
+              role="listbox"
+              aria-label="Empresas"
+            >
+              <button
+                type="button"
+                className="admin-store-option"
+                role="option"
+                aria-selected="true"
+                onClick={() => setStoreMenuOpen(false)}
+              >
+                <span className="store-avatar">SB</span>
+                <span>
+                  <b>StopBeer</b>
+                  <small>Distribuidora</small>
+                </span>
+                <Check size={15} />
+              </button>
+            </div>
+          )}
         </div>
         <div className="side-label">MENU PRINCIPAL</div>
         {["Visão geral", "Pedidos", "Produtos"].map((x, i) => (
@@ -476,13 +600,31 @@ export default function AdminPage() {
         ))}
         <div className="sidebar-bottom">
           <div className="admin-profile">
-            <span className="profile-avatar">
-              {user?.email?.[0]?.toUpperCase() || "S"}
-            </span>
-            <span>
-              <b>{user?.email || "Administrador"}</b>
+            <button
+              className="profile-avatar profile-trigger"
+              title="Editar perfil"
+              aria-label="Editar perfil"
+              onClick={() => setProfileOpen(true)}
+            >
+              {ownerInitial}
+              {(profilePhoto || user?.photoURL) && (
+                <img
+                  src={profilePhoto || user?.photoURL}
+                  alt=""
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
+            </button>
+            <button
+              className="profile-details"
+              onClick={() => setProfileOpen(true)}
+              title="Editar perfil"
+            >
+              <b>{ownerDisplayName}</b>
               <small>Proprietário</small>
-            </span>
+            </button>
             <button
               title="Sair"
               onClick={() => {
@@ -510,8 +652,22 @@ export default function AdminPage() {
             <span className="live-indicator">
               <i /> Loja aberta
             </span>
-            <button className="admin-avatar">
-              {user?.email?.[0]?.toUpperCase() || "S"}
+            <button
+              className="admin-avatar profile-trigger"
+              onClick={() => setProfileOpen(true)}
+              title="Editar perfil"
+              aria-label="Editar perfil"
+            >
+              {ownerInitial}
+              {(profilePhoto || user?.photoURL) && (
+                <img
+                  src={profilePhoto || user?.photoURL}
+                  alt=""
+                  onError={(event) => {
+                    event.currentTarget.style.display = "none";
+                  }}
+                />
+              )}
             </button>
           </div>
         </header>
@@ -522,21 +678,36 @@ export default function AdminPage() {
                 <h2>Resumo da operação</h2>
                 <p>Acompanhe como estão as vendas da sua loja.</p>
               </div>
-              <label className="month-picker">
-                {localMonth && (
-                  <>
-                    <span>Período</span>
-                    <input
-                      type="month"
-                      value={month}
-                      onChange={(e) => {
-                        setMonth(e.target.value);
-                        setLocalMonth(e.target.value);
-                      }}
-                    />
-                  </>
-                )}
-              </label>
+              <div className="month-picker month-selector">
+                <button
+                  type="button"
+                  className="month-nav"
+                  aria-label="Mês anterior"
+                  onClick={() => changeMonth(-1)}
+                >
+                  <ChevronLeft size={17} />
+                </button>
+                <span className="month-label">{formatMonthLabel(month)}</span>
+                <label className="month-calendar" aria-label="Escolher mês">
+                  <CalendarDays size={16} />
+                  <input
+                    type="month"
+                    value={month}
+                    aria-label="Escolher mês"
+                    onChange={(event) => {
+                      if (event.target.value) setMonth(event.target.value);
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="month-nav"
+                  aria-label="Próximo mês"
+                  onClick={() => changeMonth(1)}
+                >
+                  <ChevronRight size={17} />
+                </button>
+              </div>
             </div>
             <div className="kpi-grid">
               <Metric
@@ -913,6 +1084,83 @@ export default function AdminPage() {
               onSubmit={saveProduct}
               onCancel={() => setEditingProduct(null)}
             />
+          </section>
+        </div>
+      )}
+      {profileOpen && (
+        <div
+          className="modal-wrap profile-modal-wrap"
+          onMouseDown={(event) =>
+            event.target === event.currentTarget && setProfileOpen(false)
+          }
+        >
+          <section
+            className="modal profile-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-edit-title"
+          >
+            <button
+              type="button"
+              className="modal-close icon-btn"
+              onClick={() => setProfileOpen(false)}
+              aria-label="Fechar edição de perfil"
+            >
+              <X />
+            </button>
+            <div className="profile-modal-heading">
+              <span className="profile-preview">
+                {ownerInitial}
+                {(profilePhoto || user?.photoURL) && (
+                  <img
+                    src={profilePhoto || user?.photoURL}
+                    alt=""
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                )}
+              </span>
+              <div>
+                <span className="eyebrow">CONTA DO PROPRIETÁRIO</span>
+                <h2 id="profile-edit-title">Meu perfil</h2>
+              </div>
+            </div>
+            <form className="profile-edit-form" onSubmit={saveProfile}>
+              <label>
+                Nome de exibição
+                <input
+                  name="displayName"
+                  type="text"
+                  maxLength={60}
+                  placeholder="Como quer aparecer no painel"
+                  defaultValue={profileName || user?.displayName || ""}
+                />
+              </label>
+              <label>
+                URL da imagem de perfil
+                <input
+                  name="photoURL"
+                  type="url"
+                  placeholder="https://..."
+                  defaultValue={profilePhoto || user?.photoURL || ""}
+                />
+                <small>Use um link público direto para a imagem.</small>
+              </label>
+              {user?.email && (
+                <p className="profile-email">
+                  E-mail de acesso: <b>{user.email}</b>
+                </p>
+              )}
+              <button
+                className="primary-btn full"
+                type="submit"
+                disabled={profileSaving}
+              >
+                {profileSaving ? "Salvando..." : "Salvar perfil"}
+                {!profileSaving && <Check size={16} />}
+              </button>
+            </form>
           </section>
         </div>
       )}
