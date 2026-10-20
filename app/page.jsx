@@ -534,7 +534,7 @@ export default function HomePage() {
                 SELEÇÃO STOPBEER <span className="tiny-line" />
               </div>
               <h2>
-                A resenha começa <em>por aqui.</em>
+                A resenha começa <em>aqui.</em>
               </h2>
               <p>Escolhe a sua e deixa o resto com a gente.</p>
             </div>
