@@ -97,6 +97,7 @@ export default function AdminPage() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [productsLoading, setProductsLoading] = useState(firebaseEnabled);
   const [importingCatalog, setImportingCatalog] = useState(false);
+  const [addingProduct, setAddingProduct] = useState(false);
 
   useEffect(() => {
     if (firebaseEnabled) return;
@@ -306,6 +307,7 @@ export default function AdminPage() {
           confirmButtonColor: "#c92f32",
         });
       } else {
+        setAddingProduct(false);
         notify("Produto adicionado");
       }
       formElement.reset();
@@ -973,16 +975,13 @@ export default function AdminPage() {
                 {products.length} produtos cadastrados
               </span>
             </div>
-            <div className="products-admin-grid">
-              <section className="panel add-product-panel">
-                <ProductForm onSubmit={saveProduct} />
-              </section>
-              <section className="panel inventory-panel">
-                <div className="panel-head">
-                  <div>
-                    <h3>Produtos</h3>
-                    <p>Gerencie preços e disponibilidade.</p>
-                  </div>
+            <section className="panel inventory-panel inventory-panel-full">
+              <div className="panel-head">
+                <div>
+                  <h3>Produtos</h3>
+                  <p>Gerencie preços e disponibilidade.</p>
+                </div>
+                <div className="inventory-header-actions">
                   {firebaseEnabled &&
                     !productsLoading &&
                     initialCatalogMissing.length > 0 && (
@@ -998,63 +997,70 @@ export default function AdminPage() {
                         <Plus size={16} />
                       </button>
                     )}
+                  <button
+                    type="button"
+                    className="primary-btn add-product-trigger"
+                    onClick={() => setAddingProduct(true)}
+                  >
+                    Novo produto <Plus size={16} />
+                  </button>
                 </div>
-                <div className="inventory-list">
-                  {productsLoading && (
-                    <div className="admin-empty">
-                      <p>Carregando produtos...</p>
-                    </div>
-                  )}
-                  {!productsLoading && products.length === 0 && (
-                    <div className="admin-empty">
-                      <Package />
-                      <p>
-                        {firebaseEnabled
-                          ? "Ainda não há produtos no Firestore. Cadastre um produto ou importe o catálogo inicial."
-                          : "Nenhum produto cadastrado."}
-                      </p>
-                    </div>
-                  )}
-                  {products.map((p) => (
-                    <div className="inventory-row" key={p.id}>
-                      <img
-                        src={p.imageUrl}
-                        onError={(event) => handleProductImageError(event, p)}
-                      />
-                      <span className="inventory-name">
-                        <b>{p.name}</b>
-                        <small>
-                          {p.category} · {brl(p.price)} · {p.stock} un.
-                        </small>
-                      </span>
-                      <button
-                        className="edit-product"
-                        onClick={() => setEditingProduct(p)}
-                        title={`Editar ${p.name}`}
-                        aria-label={`Editar ${p.name}`}
-                      >
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        className={`availability ${p.available ? "on" : ""}`}
-                        onClick={() => toggleProduct(p)}
-                        title="Alternar disponibilidade"
-                        aria-label={`${p.available ? "Pausar" : "Ativar"} ${p.name}`}
-                      >
-                        <i />
-                      </button>
-                      <button
-                        className="remove-product"
-                        onClick={() => removeProduct(p)}
-                        title="Remover"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            </div>
+              </div>
+              <div className="inventory-list">
+                {productsLoading && (
+                  <div className="admin-empty">
+                    <p>Carregando produtos...</p>
+                  </div>
+                )}
+                {!productsLoading && products.length === 0 && (
+                  <div className="admin-empty">
+                    <Package />
+                    <p>
+                      {firebaseEnabled
+                        ? "Ainda não há produtos no Firestore. Cadastre um produto ou importe o catálogo inicial."
+                        : "Nenhum produto cadastrado."}
+                    </p>
+                  </div>
+                )}
+                {products.map((p) => (
+                  <div className="inventory-row" key={p.id}>
+                    <img
+                      src={p.imageUrl}
+                      onError={(event) => handleProductImageError(event, p)}
+                    />
+                    <span className="inventory-name">
+                      <b>{p.name}</b>
+                      <small>
+                        {p.category} · {brl(p.price)} · {p.stock} un.
+                      </small>
+                    </span>
+                    <button
+                      className="edit-product"
+                      onClick={() => setEditingProduct(p)}
+                      title={`Editar ${p.name}`}
+                      aria-label={`Editar ${p.name}`}
+                    >
+                      <Pencil size={16} />
+                    </button>
+                    <button
+                      className={`availability ${p.available ? "on" : ""}`}
+                      onClick={() => toggleProduct(p)}
+                      title="Alternar disponibilidade"
+                      aria-label={`${p.available ? "Pausar" : "Ativar"} ${p.name}`}
+                    >
+                      <i />
+                    </button>
+                    <button
+                      className="remove-product"
+                      onClick={() => removeProduct(p)}
+                      title="Remover"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
           </>
         )}
       </main>
@@ -1084,6 +1090,31 @@ export default function AdminPage() {
               onSubmit={saveProduct}
               onCancel={() => setEditingProduct(null)}
             />
+          </section>
+        </div>
+      )}
+      {addingProduct && (
+        <div
+          className="modal-wrap admin-product-edit-overlay"
+          onMouseDown={(event) =>
+            event.target === event.currentTarget && setAddingProduct(false)
+          }
+        >
+          <section
+            className="modal admin-product-edit-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-product-title"
+          >
+            <button
+              type="button"
+              className="modal-close icon-btn"
+              onClick={() => setAddingProduct(false)}
+              aria-label="Fechar cadastro de produto"
+            >
+              <X />
+            </button>
+            <ProductForm onSubmit={saveProduct} />
           </section>
         </div>
       )}
@@ -1237,7 +1268,7 @@ function ProductForm({ product = null, onSubmit, onCancel }) {
     <>
       <div className="panel-head product-form-head">
         <div>
-          <h3 id={editing ? "edit-product-title" : undefined}>
+          <h3 id={editing ? "edit-product-title" : "new-product-title"}>
             {editing ? "Editar produto" : "Novo produto"}
           </h3>
           <p>
